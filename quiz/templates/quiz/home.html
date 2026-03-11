@@ -1,0 +1,123 @@
+{% extends "quiz/base.html" %}
+{% block title %}UGP Kviz — Početna{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="topic-badge">Pokretanje kviza</div>
+    <h2 style="font-family:'Playfair Display',serif; font-size:1.8rem; margin-bottom:0.5rem;">
+        Dobrodošli na kviz
+    </h2>
+    <p style="color:#6b5c3e; font-style:italic; margin-bottom:2rem;">
+        Odgovarajte na 20 zadataka iz građanskog prava. AI asistent će ocijeniti vaš odgovor i dati povratnu informaciju.
+    </p>
+
+    <hr class="divider">
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label class="form-label">AI Servis (odaberite jedan)</label>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:0.8rem; margin-bottom:0.8rem;">
+
+                <label id="card-groq" class="provider-card selected" onclick="selectProvider('groq')">
+                    <input type="radio" name="provider" value="groq" checked style="display:none;">
+                    <div class="provider-icon">⚡</div>
+                    <div class="provider-name">Groq <span class="free-badge">BESPLATAN</span></div>
+                    <div class="provider-desc">Llama 3 model · Besplatan · Jako brz</div>
+                </label>
+
+                <label id="card-gemini" class="provider-card" onclick="selectProvider('gemini')">
+                    <input type="radio" name="provider" value="gemini" style="display:none;">
+                    <div class="provider-icon">🌟</div>
+                    <div class="provider-name">Google Gemini <span class="free-badge">BESPLATAN</span></div>
+                    <div class="provider-desc">Gemini 1.5 Flash · Besplatan tier</div>
+                </label>
+
+                <label id="card-openai" class="provider-card" onclick="selectProvider('openai')">
+                    <input type="radio" name="provider" value="openai" style="display:none;">
+                    <div class="provider-icon">🤖</div>
+                    <div class="provider-name">OpenAI GPT-3.5</div>
+                    <div class="provider-desc">Plaća se · ~$0.02 za cijeli kviz</div>
+                </label>
+
+            </div>
+
+            <div id="instructions-groq" class="provider-instructions">
+                🔑 <strong>Groq API ključ:</strong> Idite na <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a> → kreirajte besplatan nalog → "Create API Key". Potpuno besplatno!
+            </div>
+            <div id="instructions-gemini" class="provider-instructions" style="display:none;">
+                🔑 <strong>Gemini API ključ:</strong> Idite na <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com/app/apikey</a> → "Get API key". Besplatan tier: 15 zahtjeva/min.
+            </div>
+            <div id="instructions-openai" class="provider-instructions" style="display:none;">
+                🔑 <strong>OpenAI API ključ:</strong> Idite na <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com/api-keys</a>. Zahtijeva plaćanje — min. $5 kredita.
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="api_key">API Ključ</label>
+            <input class="form-input" type="password" id="api_key" name="api_key"
+                   placeholder="Unesite vaš API ključ..." required autocomplete="off">
+            <p class="info-note">🔒 Ključ se čuva samo u sesiji i šalje isključivo direktno odabranom servisu.</p>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Redoslijed pitanja</label>
+            <div class="radio-group">
+                <label class="radio-label"><input type="radio" name="mode" value="sequential" checked> Redoslijedom (1–20)</label>
+                <label class="radio-label"><input type="radio" name="mode" value="random"> Nasumičnim redoslijedom</label>
+            </div>
+        </div>
+
+        <hr class="divider">
+
+        <div style="display:flex; align-items:center; gap:2rem; flex-wrap:wrap;">
+            <button type="submit" class="btn btn-primary">Pokreni kviz →</button>
+            <span style="font-size:0.88rem; color:#8a7050; font-style:italic;">20 pitanja · Uvod u Građansko Pravo</span>
+        </div>
+    </form>
+</div>
+
+<div style="margin-top:2rem; display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:1rem;">
+    <div style="padding:1.2rem; border:1px solid var(--border); background:white; text-align:center;">
+        <div style="font-size:1.8rem; margin-bottom:0.3rem;">📝</div>
+        <div style="font-family:'Playfair Display',serif; font-weight:700; font-size:1.1rem;">20 Zadataka</div>
+        <div style="font-size:0.82rem; color:#8a7050; font-style:italic;">Svi iz nastavnog materijala</div>
+    </div>
+    <div style="padding:1.2rem; border:1px solid var(--border); background:white; text-align:center;">
+        <div style="font-size:1.8rem; margin-bottom:0.3rem;">🤖</div>
+        <div style="font-family:'Playfair Display',serif; font-weight:700; font-size:1.1rem;">AI Ocjenjivanje</div>
+        <div style="font-size:0.82rem; color:#8a7050; font-style:italic;">Groq / Gemini / OpenAI</div>
+    </div>
+    <div style="padding:1.2rem; border:1px solid var(--border); background:white; text-align:center;">
+        <div style="font-size:1.8rem; margin-bottom:0.3rem;">📊</div>
+        <div style="font-family:'Playfair Display',serif; font-weight:700; font-size:1.1rem;">Rezultati</div>
+        <div style="font-size:0.82rem; color:#8a7050; font-style:italic;">Detaljni pregled na kraju</div>
+    </div>
+</div>
+
+<style>
+.provider-card { display:block; padding:1rem 1.2rem; border:1.5px solid var(--border); cursor:pointer; transition:all 0.2s; background:white; user-select:none; }
+.provider-card:hover { border-color:var(--gold); }
+.provider-card.selected { border-color:var(--gold); background:#fffdf5; box-shadow:0 0 0 1px var(--gold); }
+.provider-icon { font-size:1.5rem; margin-bottom:0.2rem; }
+.provider-name { font-weight:700; font-size:0.95rem; display:flex; align-items:center; gap:0.5rem; }
+.provider-desc { font-size:0.78rem; color:#8a7050; font-style:italic; margin-top:0.2rem; }
+.free-badge { font-size:0.65rem; background:var(--green); color:white; padding:0.1rem 0.4rem; font-style:normal; font-weight:700; letter-spacing:0.05em; }
+.provider-instructions { font-size:0.85rem; padding:0.7rem 1rem; background:#fffbf0; border:1px solid var(--border); border-left:3px solid var(--gold); color:#5a4a2e; line-height:1.6; }
+.provider-instructions a { color:var(--gold); }
+</style>
+
+<script>
+function selectProvider(p) {
+    ['groq','gemini','openai'].forEach(id => {
+        document.getElementById('card-'+id).classList.remove('selected');
+        document.getElementById('instructions-'+id).style.display = 'none';
+        document.querySelector('input[value="'+id+'"]').checked = false;
+    });
+    document.getElementById('card-'+p).classList.add('selected');
+    document.getElementById('instructions-'+p).style.display = 'block';
+    document.querySelector('input[value="'+p+'"]').checked = true;
+}
+</script>
+{% endblock %}

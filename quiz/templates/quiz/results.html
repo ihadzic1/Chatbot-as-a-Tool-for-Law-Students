@@ -1,0 +1,92 @@
+{% extends "quiz/base.html" %}
+{% block title %}Rezultati — UGP Kviz{% endblock %}
+
+{% block content %}
+
+<div class="card" style="text-align:center; padding:2.5rem 2rem;">
+    <div style="font-size:3rem; margin-bottom:0.5rem;">
+        {% if percentage >= 80 %}🏆
+        {% elif percentage >= 60 %}🎓
+        {% elif percentage >= 40 %}📚
+        {% else %}💪
+        {% endif %}
+    </div>
+
+    <div style="font-family:'Playfair Display',serif; font-size:1.3rem; font-style:italic; color:#6b5c3e; margin-bottom:0.5rem;">
+        Kviz završen
+    </div>
+
+    <div class="score-display">
+        {{ score }}<span class="denom"> / {{ total }}</span>
+    </div>
+
+    <div style="margin-top:0.5rem; font-size:1.1rem; color:
+        {% if percentage >= 80 %}var(--green)
+        {% elif percentage >= 60 %}var(--gold)
+        {% else %}var(--red){% endif %}; font-weight:600;">
+        {{ percentage }}%
+        &mdash;
+        {% if percentage >= 80 %}Odličan rezultat!
+        {% elif percentage >= 60 %}Dobar rezultat
+        {% elif percentage >= 40 %}Ima prostora za napredak
+        {% else %}Treba još učiti
+        {% endif %}
+    </div>
+</div>
+
+{% if results %}
+<div style="margin-top:2rem;">
+    <div style="font-family:'Playfair Display',serif; font-size:1.3rem; margin-bottom:1rem;">
+        Pregled odgovora
+    </div>
+
+    {% for r in results %}
+    <div class="result-item">
+        <div class="ri-header">
+            <div>
+                <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.2rem;">
+                    <span class="result-icon">
+                        {% if r.is_correct %}✅{% elif r.score >= 40 %}⚠️{% else %}❌{% endif %}
+                    </span>
+                    <div style="font-weight:600; font-size:0.9rem;">Pitanje {{ forloop.counter }}</div>
+                    <span style="font-size:0.78rem; padding:0.1rem 0.5rem; background:{% if r.is_correct %}#e8f7ef{% elif r.score >= 40 %}#fdf6e3{% else %}#fdf0f0{% endif %}; color:{% if r.is_correct %}var(--green){% elif r.score >= 40 %}#8a5f10{% else %}var(--red){% endif %}; font-weight:700;">
+                        {{ r.score }}/100
+                    </span>
+                </div>
+                <div class="result-topic">{{ r.topic }}</div>
+            </div>
+        </div>
+
+        <details style="margin-top:0.8rem;">
+            <summary style="cursor:pointer; font-size:0.85rem; color:#6b5c3e; font-style:italic; user-select:none;">
+                Pogledaj detalje
+            </summary>
+            <div style="margin-top:0.8rem; font-size:0.88rem; line-height:1.7;">
+                <div style="margin-bottom:0.5rem;">
+                    <strong>Vaš odgovor:</strong>
+                    <div style="background:var(--parchment); padding:0.6rem 0.8rem; border-left:3px solid var(--border); margin-top:0.3rem; white-space:pre-line;">{{ r.user_answer }}</div>
+                </div>
+                <div style="margin-bottom:0.5rem;">
+                    <strong>AI komentar:</strong>
+                    <div style="padding:0.6rem 0.8rem; color:#4a3a20; margin-top:0.3rem;">{{ r.feedback }}</div>
+                </div>
+                <div>
+                    <strong>Tačan odgovor:</strong>
+                    <div style="background:#f0faf5; padding:0.6rem 0.8rem; border-left:3px solid var(--green); margin-top:0.3rem; white-space:pre-line;">{{ r.correct_answer }}</div>
+                </div>
+            </div>
+        </details>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div style="text-align:center; margin-top:2.5rem; display:flex; gap:1rem; justify-content:center; flex-wrap:wrap;">
+    <a href="{% url 'home' %}" class="btn btn-primary">
+        Novi kviz →
+    </a>
+    <a href="{% url 'restart' %}" class="btn btn-outline">
+        Resetuj sesiju
+    </a>
+</div>
+{% endblock %}

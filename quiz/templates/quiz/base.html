@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}UGP Kviz{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;1,8..60,300&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --ink: #1a1208;
+            --parchment: #faf6ee;
+            --cream: #f2ead8;
+            --gold: #c9952a;
+            --gold-light: #e8b84b;
+            --red: #9b2220;
+            --green: #1e5c3a;
+            --border: #d4c9a8;
+            --shadow: rgba(26,18,8,0.12);
+        }
+
+        body {
+            background-color: var(--parchment);
+            background-image:
+                radial-gradient(ellipse at 20% 0%, rgba(201,149,42,0.06) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 100%, rgba(155,34,32,0.04) 0%, transparent 60%);
+            color: var(--ink);
+            font-family: 'Source Serif 4', Georgia, serif;
+            font-size: 16px;
+            line-height: 1.7;
+            min-height: 100vh;
+        }
+
+        /* ---- Decorative header line ---- */
+        body::before {
+            content: '';
+            display: block;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, var(--gold), var(--red), var(--gold), transparent);
+        }
+
+        .page-wrapper {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem 4rem;
+        }
+
+        /* ---- Site header ---- */
+        .site-header {
+            text-align: center;
+            padding: 2.5rem 0 2rem;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 3rem;
+        }
+
+        .site-header .seal {
+            font-size: 2.8rem;
+            display: block;
+            margin-bottom: 0.5rem;
+            filter: drop-shadow(0 2px 6px var(--shadow));
+        }
+
+        .site-header h1 {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 2.2rem;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            line-height: 1.1;
+            color: var(--ink);
+        }
+
+        .site-header h1 span {
+            color: var(--gold);
+        }
+
+        .site-header .subtitle {
+            font-style: italic;
+            color: #6b5c3e;
+            font-size: 0.95rem;
+            margin-top: 0.4rem;
+            letter-spacing: 0.04em;
+        }
+
+        /* ---- Card ---- */
+        .card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 2px;
+            padding: 2.5rem;
+            box-shadow: 0 2px 20px var(--shadow), 0 0 0 1px rgba(201,149,42,0.08);
+            position: relative;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--gold), var(--gold-light), var(--gold));
+        }
+
+        /* ---- Buttons ---- */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.8rem;
+            border: none;
+            cursor: pointer;
+            font-family: 'Source Serif 4', serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: var(--ink);
+            color: var(--parchment);
+        }
+        .btn-primary:hover {
+            background: var(--gold);
+            color: var(--ink);
+        }
+
+        .btn-gold {
+            background: var(--gold);
+            color: var(--ink);
+        }
+        .btn-gold:hover {
+            background: var(--gold-light);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--ink);
+            border: 1.5px solid var(--border);
+        }
+        .btn-outline:hover {
+            border-color: var(--gold);
+            color: var(--gold);
+        }
+
+        /* ---- Progress bar ---- */
+        .progress-wrap {
+            margin-bottom: 2rem;
+        }
+
+        .progress-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.82rem;
+            color: #7a6645;
+            margin-bottom: 0.5rem;
+            font-style: italic;
+        }
+
+        .progress-track {
+            height: 5px;
+            background: var(--cream);
+            border-radius: 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--gold), var(--gold-light));
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* ---- Topic badge ---- */
+        .topic-badge {
+            display: inline-block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--gold);
+            border: 1px solid var(--gold);
+            padding: 0.2rem 0.7rem;
+            margin-bottom: 1.2rem;
+        }
+
+        /* ---- Question text ---- */
+        .question-text {
+            font-size: 1.05rem;
+            line-height: 1.8;
+            color: var(--ink);
+            border-left: 3px solid var(--gold);
+            padding-left: 1.2rem;
+            margin-bottom: 2rem;
+            white-space: pre-line;
+        }
+
+        /* ---- Textarea ---- */
+        .answer-area {
+            width: 100%;
+            min-height: 180px;
+            padding: 1rem 1.2rem;
+            font-family: 'Source Serif 4', serif;
+            font-size: 1rem;
+            color: var(--ink);
+            background: var(--parchment);
+            border: 1.5px solid var(--border);
+            resize: vertical;
+            outline: none;
+            transition: border-color 0.2s;
+            line-height: 1.7;
+        }
+
+        .answer-area:focus {
+            border-color: var(--gold);
+            background: #fffdf7;
+        }
+
+        /* ---- Feedback box ---- */
+        .feedback-box {
+            margin-top: 1.8rem;
+            padding: 1.5rem 1.8rem;
+            border: 1px solid;
+            display: none;
+            animation: fadeSlideIn 0.4s ease;
+        }
+
+        @keyframes fadeSlideIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .feedback-box.correct {
+            border-color: #2d7a50;
+            background: #f0faf5;
+        }
+
+        .feedback-box.incorrect {
+            border-color: #9b2220;
+            background: #fdf4f4;
+        }
+
+        .feedback-box.partial {
+            border-color: #b07d1a;
+            background: #fdf8ec;
+        }
+
+        .feedback-verdict {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .correct .feedback-verdict { color: var(--green); }
+        .incorrect .feedback-verdict { color: var(--red); }
+        .partial .feedback-verdict { color: #8a5f10; }
+
+        .feedback-text {
+            font-size: 0.95rem;
+            line-height: 1.7;
+            margin-bottom: 1rem;
+        }
+
+        .score-pill {
+            display: inline-block;
+            font-size: 0.8rem;
+            font-weight: 700;
+            padding: 0.15rem 0.7rem;
+            border-radius: 20px;
+            margin-left: 0.5rem;
+            vertical-align: middle;
+        }
+        .correct .score-pill { background: #2d7a50; color: white; }
+        .incorrect .score-pill { background: var(--red); color: white; }
+        .partial .score-pill { background: #c8850d; color: white; }
+
+        .points-list {
+            list-style: none;
+            font-size: 0.88rem;
+        }
+        .points-list li {
+            padding: 0.2rem 0;
+            padding-left: 1.2rem;
+            position: relative;
+        }
+        .points-list li::before {
+            position: absolute;
+            left: 0;
+        }
+        .points-list.good li::before { content: '✓'; color: var(--green); }
+        .points-list.bad li::before  { content: '✗'; color: var(--red); }
+
+        .correct-answer-reveal {
+            margin-top: 1rem;
+            padding: 1rem 1.2rem;
+            background: rgba(0,0,0,0.03);
+            border-left: 3px solid var(--border);
+            font-size: 0.9rem;
+        }
+
+        .correct-answer-reveal summary {
+            cursor: pointer;
+            font-weight: 600;
+            font-style: italic;
+            color: #6b5c3e;
+            user-select: none;
+        }
+
+        .correct-answer-reveal p {
+            margin-top: 0.8rem;
+            white-space: pre-line;
+            line-height: 1.7;
+        }
+
+        /* ---- Action row ---- */
+        .action-row {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .loading-dots {
+            display: inline-flex;
+            gap: 4px;
+            align-items: center;
+        }
+        .loading-dots span {
+            width: 6px; height: 6px;
+            background: currentColor;
+            border-radius: 50%;
+            animation: bounce 1.2s infinite;
+        }
+        .loading-dots span:nth-child(2) { animation-delay: 0.15s; }
+        .loading-dots span:nth-child(3) { animation-delay: 0.3s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        /* ---- Results ---- */
+        .results-header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .score-display {
+            font-family: 'Playfair Display', serif;
+            font-size: 4rem;
+            font-weight: 900;
+            line-height: 1;
+            color: var(--gold);
+        }
+
+        .score-display .denom {
+            font-size: 1.8rem;
+            color: #9a8060;
+        }
+
+        .result-item {
+            border: 1px solid var(--border);
+            margin-bottom: 1rem;
+            padding: 1rem 1.4rem;
+            background: white;
+        }
+
+        .result-item .ri-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            justify-content: space-between;
+        }
+
+        .result-icon { font-size: 1.2rem; flex-shrink: 0; }
+        .result-topic { font-size: 0.75rem; color: #7a6645; font-style: italic; margin-top: 0.1rem; }
+        .result-q { font-size: 0.88rem; color: #4a3a20; }
+
+        /* ---- Home form ---- */
+        .form-group { margin-bottom: 1.5rem; }
+        .form-label {
+            display: block;
+            font-weight: 600;
+            font-size: 0.85rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+            color: #5a4a2e;
+        }
+        .form-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            font-family: 'Source Serif 4', serif;
+            font-size: 0.95rem;
+            color: var(--ink);
+            background: var(--parchment);
+            border: 1.5px solid var(--border);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-input:focus { border-color: var(--gold); }
+
+        .radio-group {
+            display: flex;
+            gap: 1.5rem;
+        }
+        .radio-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+        .radio-label input { accent-color: var(--gold); }
+
+        .info-note {
+            font-size: 0.82rem;
+            color: #8a7050;
+            margin-top: 0.5rem;
+            font-style: italic;
+        }
+
+        .divider {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 2rem 0;
+        }
+
+        /* ---- Footer ---- */
+        .page-footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.8rem;
+            color: #9a8060;
+            font-style: italic;
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <div class="page-wrapper">
+
+        <header class="site-header">
+            <span class="seal">⚖️</span>
+            <h1>Uvod u <span>Građansko Pravo</span></h1>
+            <p class="subtitle">Interaktivni kviz &mdash; 20 zadataka</p>
+        </header>
+
+        {% block content %}{% endblock %}
+
+        <footer class="page-footer">
+            Pravni fakultet &mdash; Uvod u Građansko Pravo &mdash; Kviz aplikacija
+        </footer>
+    </div>
+</body>
+</html>

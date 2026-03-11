@@ -1,0 +1,195 @@
+{% extends "quiz/base.html" %}
+{% block title %}Pitanje {{ current_num }} — UGP Kviz{% endblock %}
+
+{% block extra_head %}
+<style>
+    .submit-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+    #next-btn { display: none; }
+    #skip-btn { display: inline-flex; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Progress -->
+<div class="progress-wrap">
+    <div class="progress-meta">
+        <span>Pitanje {{ current_num }} od {{ total }}</span>
+        <span>{{ progress_percent }}% završeno</span>
+    </div>
+    <div class="progress-track">
+        <div class="progress-fill" style="width:{{ progress_percent }}%"></div>
+    </div>
+</div>
+
+<!-- Question card -->
+<div class="card">
+    <div class="topic-badge">{{ question.topic }}</div>
+
+    <div class="question-text">{{ question.question }}</div>
+
+    <div style="margin-bottom:0.7rem;">
+        <label for="answer" style="font-size:0.85rem; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#5a4a2e;">
+            Vaš odgovor:
+        </label>
+    </div>
+
+    <textarea
+        id="answer"
+        class="answer-area"
+        placeholder="Napišite vaš odgovor ovdje..."
+    ></textarea>
+
+    <div class="action-row">
+        <button id="submit-btn" class="btn btn-primary submit-btn" onclick="submitAnswer()">
+            Provjeri odgovor ✓
+        </button>
+        <a id="skip-btn" href="{% url 'next_question' %}" class="btn btn-outline">
+            Preskoči →
+        </a>
+        <a id="next-btn" href="{% url 'next_question' %}" class="btn btn-gold">
+            {% if current_num == total %}
+                Vidi rezultate →
+            {% else %}
+                Sljedeće pitanje →
+            {% endif %}
+        </a>
+    </div>
+
+    <!-- Feedback -->
+    <div id="feedback-box" class="feedback-box">
+        <div class="feedback-verdict" id="verdict-text"></div>
+        <div class="feedback-text" id="feedback-text"></div>
+
+        <div id="good-points-wrap" style="display:none; margin-bottom:0.8rem;">
+            <div style="font-size:0.8rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color: var(--green); margin-bottom:0.3rem;">Dobro navedeno:</div>
+            <ul id="good-points" class="points-list good"></ul>
+        </div>
+
+        <div id="bad-points-wrap" style="display:none; margin-bottom:0.8rem;">
+            <div style="font-size:0.8rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color: var(--red); margin-bottom:0.3rem;">Nedostaje:</div>
+            <ul id="bad-points" class="points-list bad"></ul>
+        </div>
+
+        <details class="correct-answer-reveal">
+            <summary>Pogledaj tačan odgovor</summary>
+            <p id="correct-answer-text"></p>
+        </details>
+    </div>
+</div>
+
+<!-- Question nav dots (compact) -->
+<div style="text-align:center; margin-top:1.5rem; font-size:0.82rem; color:#9a8060; font-style:italic;">
+    Pitanje {{ current_num }} / {{ total }} &mdash; {{ question.topic }}
+</div>
+
+<script>
+    const QUESTION_ID = {{ question.id }};
+    const CHECK_URL = "{% url 'check_answer' %}";
+    const CSRF_TOKEN = "{{ csrf_token }}";
+
+    async function submitAnswer() {
+        const answer = document.getElementById('answer').value.trim();
+        if (!answer) {
+            alert('Molimo unesite odgovor.');
+            return;
+        }
+
+        const submitBtn = document.getElementById('submit-btn');
+        const skipBtn = document.getElementById('skip-btn');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="loading-dots"><span></span><span></span><span></span></span> AI ocjenjuje...';
+
+        try {
+            const response = await fetch(CHECK_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': CSRF_TOKEN,
+                },
+                body: JSON.stringify({
+                    answer: answer,
+                    question_id: QUESTION_ID,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (data.error) {
+                alert('Greška: ' + data.error);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Provjeri odgovor ✓';
+                return;
+            }
+
+            showFeedback(data);
+
+            // Hide submit + skip, show next
+            submitBtn.style.display = 'none';
+            skipBtn.style.display = 'none';
+            document.getElementById('next-btn').style.display = 'inline-flex';
+
+            // Lock textarea
+            document.getElementById('answer').disabled = true;
+
+        } catch (err) {
+            alert('Greška pri slanju zahtjeva: ' + err.message);
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Provjeri odgovor ✓';
+        }
+    }
+
+    function showFeedback(data) {
+        const box = document.getElementById('feedback-box');
+        const verdict = document.getElementById('verdict-text');
+        const feedbackText = document.getElementById('feedback-text');
+        const correctAnswerText = document.getElementById('correct-answer-text');
+
+        const score = data.score || 0;
+
+        // Determine class
+        let cls, icon, label;
+        if (data.is_correct || score >= 75) {
+            cls = 'correct'; icon = '✅'; label = 'Tačno!';
+        } else if (score >= 40) {
+            cls = 'partial'; icon = '⚠️'; label = 'Djelimično tačno';
+        } else {
+            cls = 'incorrect'; icon = '❌'; label = 'Netačno';
+        }
+
+        box.className = 'feedback-box ' + cls;
+        verdict.innerHTML = icon + ' ' + label + ' <span class="score-pill">' + score + '/100</span>';
+        feedbackText.textContent = data.feedback || '';
+        correctAnswerText.textContent = data.correct_answer || '';
+
+        // Good points
+        const goodWrap = document.getElementById('good-points-wrap');
+        const goodList = document.getElementById('good-points');
+        if (data.correct_points && data.correct_points.length > 0) {
+            goodList.innerHTML = data.correct_points.map(p => `<li>${p}</li>`).join('');
+            goodWrap.style.display = 'block';
+        }
+
+        // Missing points
+        const badWrap = document.getElementById('bad-points-wrap');
+        const badList = document.getElementById('bad-points');
+        if (data.missing_points && data.missing_points.length > 0) {
+            badList.innerHTML = data.missing_points.map(p => `<li>${p}</li>`).join('');
+            badWrap.style.display = 'block';
+        }
+
+        box.style.display = 'block';
+        box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // Ctrl+Enter to submit
+    document.getElementById('answer').addEventListener('keydown', function(e) {
+        if (e.ctrlKey && e.key === 'Enter') {
+            submitAnswer();
+        }
+    });
+</script>
+{% endblock %}
