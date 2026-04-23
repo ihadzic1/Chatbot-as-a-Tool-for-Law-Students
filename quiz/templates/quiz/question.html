@@ -3,18 +3,26 @@
 
 {% block extra_head %}
 <style>
-    .submit-btn:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-    }
+    .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
     #next-btn { display: none; }
     #skip-btn { display: inline-flex; }
+    .api-modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center; }
+    .api-modal-overlay.active { display:flex; }
+    .api-modal { background:white; padding:2rem; max-width:520px; width:90%; border:1px solid var(--border); box-shadow:0 8px 30px rgba(0,0,0,0.15); }
+    .api-modal h3 { font-family:'Playfair Display',serif; margin-bottom:0.5rem; }
+    .api-modal .warning-text { color:#b44; font-size:0.9rem; margin-bottom:1.2rem; padding:0.7rem; background:#fff5f5; border-left:3px solid #b44; }
+    .api-modal .provider-option { display:block; padding:0.7rem 1rem; border:1.5px solid var(--border); cursor:pointer; margin-bottom:0.5rem; background:white; transition:all 0.2s; }
+    .api-modal .provider-option:hover { border-color:var(--gold); }
+    .api-modal .provider-option.selected { border-color:var(--gold); background:#fffdf5; box-shadow:0 0 0 1px var(--gold); }
+    .api-modal .provider-option input { display:none; }
+    .api-modal .provider-option .p-name { font-weight:700; font-size:0.92rem; }
+    .api-modal .provider-option .p-desc { font-size:0.78rem; color:#8a7050; }
+    .api-modal .modal-error { display:none; color:#b44; font-size:0.85rem; padding:0.5rem 0.7rem; background:#fff5f5; border:1px solid #e8c5c5; margin-bottom:0.8rem; }
 </style>
 {% endblock %}
 
 {% block content %}
 
-<!-- Progress -->
 <div class="progress-wrap">
     <div class="progress-meta">
         <span>Pitanje {{ current_num }} od {{ total }}</span>
@@ -25,10 +33,8 @@
     </div>
 </div>
 
-<!-- Question card -->
 <div class="card">
     <div class="topic-badge">{{ question.topic }}</div>
-
     <div class="question-text">{{ question.question }}</div>
 
     <div style="margin-bottom:0.7rem;">
@@ -37,29 +43,18 @@
         </label>
     </div>
 
-    <textarea
-        id="answer"
-        class="answer-area"
-        placeholder="Napišite vaš odgovor ovdje..."
-    ></textarea>
+    <textarea id="answer" class="answer-area" placeholder="Napišite vaš odgovor ovdje..."></textarea>
 
     <div class="action-row">
         <button id="submit-btn" class="btn btn-primary submit-btn" onclick="submitAnswer()">
             Provjeri odgovor ✓
         </button>
-        <a id="skip-btn" href="{% url 'next_question' %}" class="btn btn-outline">
-            Preskoči →
-        </a>
+        <a id="skip-btn" href="{% url 'next_question' %}" class="btn btn-outline">Preskoči →</a>
         <a id="next-btn" href="{% url 'next_question' %}" class="btn btn-gold">
-            {% if current_num == total %}
-                Vidi rezultate →
-            {% else %}
-                Sljedeće pitanje →
-            {% endif %}
+            {% if current_num == total %}Vidi rezultate →{% else %}Sljedeće pitanje →{% endif %}
         </a>
     </div>
 
-    <!-- Feedback -->
     <div id="feedback-box" class="feedback-box">
         <div class="feedback-verdict" id="verdict-text"></div>
         <div class="feedback-text" id="feedback-text"></div>
@@ -81,77 +76,191 @@
     </div>
 </div>
 
-<!-- Question nav dots (compact) -->
 <div style="text-align:center; margin-top:1.5rem; font-size:0.82rem; color:#9a8060; font-style:italic;">
     Pitanje {{ current_num }} / {{ total }} &mdash; {{ question.topic }}
 </div>
 
+<div id="api-modal-overlay" class="api-modal-overlay">
+    <div class="api-modal">
+        <h3>⚠️ API limit dostignut</h3>
+        <div class="warning-text" id="modal-error-text">
+            Svi ugrađeni API ključevi su dostigli limit. Unesite svoj besplatan ključ da nastavite.
+        </div>
+
+        <div class="modal-error" id="modal-inline-error"></div>
+
+        <div style="margin-bottom:1rem;">
+            <div style="font-size:0.85rem; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">Odaberite servis:</div>
+
+            <label class="provider-option selected" id="modal-card-gemini" onclick="selectModalProvider('gemini')">
+                <input type="radio" name="modal_provider" value="gemini" checked>
+                <span class="p-name">🌟 Google Gemini</span>
+                <span class="p-desc"> — besplatan na <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a></span>
+            </label>
+
+            <label class="provider-option" id="modal-card-groq" onclick="selectModalProvider('groq')">
+                <input type="radio" name="modal_provider" value="groq">
+                <span class="p-name">⚡ Groq</span>
+                <span class="p-desc"> — besplatan na <a href="https://console.groq.com/keys" target="_blank">console.groq.com</a></span>
+            </label>
+
+            <label class="provider-option" id="modal-card-openai" onclick="selectModalProvider('openai')">
+                <input type="radio" name="modal_provider" value="openai">
+                <span class="p-name">🤖 OpenAI</span>
+                <span class="p-desc"> — plaća se · <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com</a></span>
+            </label>
+        </div>
+
+        <div style="margin-bottom:1rem;">
+            <label style="font-size:0.85rem; font-weight:600;">API Ključ:</label>
+            <input type="password" id="modal-api-key" class="form-input" placeholder="Unesite API ključ..." autocomplete="off" style="margin-top:0.3rem;">
+        </div>
+
+        <div style="display:flex; gap:0.8rem;">
+            <button class="btn btn-primary" id="modal-submit-btn" onclick="submitWithCustomKey()">Nastavi →</button>
+            <button class="btn btn-outline" onclick="closeModal()">Otkaži</button>
+        </div>
+    </div>
+</div>
+
 <script>
-    const QUESTION_ID = {{ question.id }};
-    const CHECK_URL = "{% url 'check_answer' %}";
-    const CSRF_TOKEN = "{{ csrf_token }}";
+    var QUESTION_ID = {{ question.id }};
+    var CHECK_URL = "{% url 'check_answer' %}";
+    var CSRF_TOKEN = "{{ csrf_token }}";
+    var pendingAnswer = '';
+    var modalProvider = 'gemini';
+
+    function selectModalProvider(p) {
+        ['gemini','groq','openai'].forEach(function(id) {
+            document.getElementById('modal-card-'+id).classList.remove('selected');
+        });
+        document.getElementById('modal-card-'+p).classList.add('selected');
+        modalProvider = p;
+    }
+
+    function showModal(errorMsg) {
+        document.getElementById('modal-error-text').textContent = errorMsg || 'Svi ugrađeni API ključevi su dostigli limit. Unesite svoj besplatan ključ da nastavite.';
+        document.getElementById('modal-inline-error').style.display = 'none';
+        document.getElementById('modal-api-key').value = '';
+        document.getElementById('api-modal-overlay').classList.add('active');
+    }
+
+    function closeModal() {
+        document.getElementById('api-modal-overlay').classList.remove('active');
+        var submitBtn = document.getElementById('submit-btn');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'Provjeri odgovor ✓';
+    }
+
+    function showModalError(msg) {
+        var el = document.getElementById('modal-inline-error');
+        el.textContent = msg;
+        el.style.display = 'block';
+    }
+
+    async function submitWithCustomKey() {
+        var key = document.getElementById('modal-api-key').value.trim();
+        if (!key) {
+            showModalError('Unesite API ključ.');
+            return;
+        }
+
+        var modalBtn = document.getElementById('modal-submit-btn');
+        modalBtn.disabled = true;
+        modalBtn.innerHTML = '<span class="loading-dots"><span></span><span></span><span></span></span> Provjeravam...';
+
+        var result = await doSubmit(pendingAnswer, modalProvider, key);
+
+        modalBtn.disabled = false;
+        modalBtn.innerHTML = 'Nastavi →';
+
+        if (result && result.ok) {
+            document.getElementById('api-modal-overlay').classList.remove('active');
+        }
+    }
 
     async function submitAnswer() {
-        const answer = document.getElementById('answer').value.trim();
+        var answer = document.getElementById('answer').value.trim();
         if (!answer) {
             alert('Molimo unesite odgovor.');
             return;
         }
+        pendingAnswer = answer;
+        doSubmit(answer, null, null);
+    }
 
-        const submitBtn = document.getElementById('submit-btn');
-        const skipBtn = document.getElementById('skip-btn');
+    async function doSubmit(answer, provider, apiKey) {
+        var submitBtn = document.getElementById('submit-btn');
+        var skipBtn = document.getElementById('skip-btn');
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<span class="loading-dots"><span></span><span></span><span></span></span> AI ocjenjuje...';
 
+        var body = {
+            answer: answer,
+            question_id: QUESTION_ID
+        };
+        if (provider) body.provider = provider;
+        if (apiKey) body.api_key = apiKey;
+
         try {
-            const response = await fetch(CHECK_URL, {
+            var response = await fetch(CHECK_URL, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': CSRF_TOKEN,
+                    'X-CSRFToken': CSRF_TOKEN
                 },
-                body: JSON.stringify({
-                    answer: answer,
-                    question_id: QUESTION_ID,
-                }),
+                body: JSON.stringify(body)
             });
 
-            const data = await response.json();
+            var data = await response.json();
+
+            if (data.needs_manual_key) {
+                if (provider && apiKey) {
+                    showModalError(data.error || 'Ovaj ključ je dostigao limit. Pokušajte sa drugim.');
+                    return { ok: false };
+                }
+                showModal(data.error);
+                return { ok: false };
+            }
 
             if (data.error) {
+                if (provider && apiKey) {
+                    showModalError('Greška: ' + data.error);
+                    return { ok: false };
+                }
                 alert('Greška: ' + data.error);
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = 'Provjeri odgovor ✓';
-                return;
+                return { ok: false };
             }
 
             showFeedback(data);
-
-            // Hide submit + skip, show next
             submitBtn.style.display = 'none';
             skipBtn.style.display = 'none';
             document.getElementById('next-btn').style.display = 'inline-flex';
-
-            // Lock textarea
             document.getElementById('answer').disabled = true;
+            return { ok: true };
 
         } catch (err) {
+            if (provider && apiKey) {
+                showModalError('Greška pri slanju: ' + err.message);
+                return { ok: false };
+            }
             alert('Greška pri slanju zahtjeva: ' + err.message);
             submitBtn.disabled = false;
             submitBtn.innerHTML = 'Provjeri odgovor ✓';
+            return { ok: false };
         }
     }
 
     function showFeedback(data) {
-        const box = document.getElementById('feedback-box');
-        const verdict = document.getElementById('verdict-text');
-        const feedbackText = document.getElementById('feedback-text');
-        const correctAnswerText = document.getElementById('correct-answer-text');
+        var box = document.getElementById('feedback-box');
+        var verdict = document.getElementById('verdict-text');
+        var feedbackText = document.getElementById('feedback-text');
+        var correctAnswerText = document.getElementById('correct-answer-text');
 
-        const score = data.score || 0;
-
-        // Determine class
-        let cls, icon, label;
+        var score = data.score || 0;
+        var cls, icon, label;
         if (data.is_correct || score >= 75) {
             cls = 'correct'; icon = '✅'; label = 'Tačno!';
         } else if (score >= 40) {
@@ -165,19 +274,17 @@
         feedbackText.textContent = data.feedback || '';
         correctAnswerText.textContent = data.correct_answer || '';
 
-        // Good points
-        const goodWrap = document.getElementById('good-points-wrap');
-        const goodList = document.getElementById('good-points');
+        var goodWrap = document.getElementById('good-points-wrap');
+        var goodList = document.getElementById('good-points');
         if (data.correct_points && data.correct_points.length > 0) {
-            goodList.innerHTML = data.correct_points.map(p => `<li>${p}</li>`).join('');
+            goodList.innerHTML = data.correct_points.map(function(p) { return '<li>'+p+'</li>'; }).join('');
             goodWrap.style.display = 'block';
         }
 
-        // Missing points
-        const badWrap = document.getElementById('bad-points-wrap');
-        const badList = document.getElementById('bad-points');
+        var badWrap = document.getElementById('bad-points-wrap');
+        var badList = document.getElementById('bad-points');
         if (data.missing_points && data.missing_points.length > 0) {
-            badList.innerHTML = data.missing_points.map(p => `<li>${p}</li>`).join('');
+            badList.innerHTML = data.missing_points.map(function(p) { return '<li>'+p+'</li>'; }).join('');
             badWrap.style.display = 'block';
         }
 
@@ -185,7 +292,6 @@
         box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
-    // Ctrl+Enter to submit
     document.getElementById('answer').addEventListener('keydown', function(e) {
         if (e.ctrlKey && e.key === 'Enter') {
             submitAnswer();
