@@ -5,19 +5,19 @@
 <div class="card">
 
     <p style="color:#6b5c3e; font-style:italic; margin-bottom:2rem;">
-        Odgovarajte na 20 zadataka iz građanskog prava. AI asistent će ocijeniti vaš odgovor i dati povratnu informaciju.
+        Odgovarajte na pitanja iz Uvoda u Građanskog Pravo. AI asistent će ocijeniti vaš odgovor i dati povratnu informaciju.
     </p>
 
     <hr class="divider">
 
-    <form method="post" id="quiz-form" onsubmit="return handleFormSubmit(event)">
+    <form method="post" id="quiz-form">
         {% csrf_token %}
 
         <div class="form-group">
             <label class="form-label">Redoslijed pitanja</label>
             <div class="radio-group">
-                <label class="radio-label"><input type="radio" name="mode" value="sequential" checked> Redoslijedom (1–20)</label>
-                <label class="radio-label"><input type="radio" name="mode" value="random"> Nasumičnim redoslijedom</label>
+                <label class="radio-label"><input type="radio" name="mode" value="sequential" checked> Fiksirani redoslijed</label>
+                <label class="radio-label"><input type="radio" name="mode" value="random"> Nasumični redoslijed</label>
             </div>
         </div>
 
@@ -34,11 +34,11 @@
 
         <div id="start-section">
             <div style="display:flex; align-items:center; gap:2rem; flex-wrap:wrap;">
-                <button type="submit" class="btn btn-primary" id="start-btn">Pokreni kviz →</button>
-                <span style="font-size:0.88rem; color:#8a7050; font-style:italic;">20 pitanja · Uvod u Građansko Pravo</span>
+                <button type="button" class="btn btn-primary" id="start-btn" onclick="handleStart()">Pokreni kviz →</button>
+                <span style="font-size:0.88rem; color:#8a7050; font-style:italic;">Uvod u Građansko Pravo</span>
             </div>
 
-            <div style="margin-top:1.5rem;" id="toggle-wrapper">
+            <div style="margin-top:1.5rem;">
                 <button type="button" class="toggle-custom-btn" onclick="toggleCustomKey()">
                     <span id="toggle-icon">▶</span> Koristi vlastiti API ključ
                 </button>
@@ -92,8 +92,8 @@
             </div>
 
             <div style="display:flex; align-items:center; gap:2rem; flex-wrap:wrap;">
-                <button type="submit" class="btn btn-primary" id="start-btn-custom">Pokreni kviz →</button>
-                <span style="font-size:0.88rem; color:#8a7050; font-style:italic;">20 pitanja · Uvod u Građansko Pravo</span>
+                <button type="submit" class="btn btn-primary">Pokreni kviz →</button>
+                <span style="font-size:0.88rem; color:#8a7050; font-style:italic;">Uvod u Građansko Pravo</span>
             </div>
         </div>
     </form>
@@ -118,26 +118,24 @@
 </style>
 
 <script>
-var customKeyMode = false;
-var preflightDone = false;
-var preflightOk = false;
 var PREFLIGHT_URL = "{% url 'api_preflight' %}";
 var CSRF = "{{ csrf_token }}";
 
 function toggleCustomKey() {
-    customKeyMode = !customKeyMode;
-    document.getElementById('custom-key-section').style.display = customKeyMode ? 'block' : 'none';
-    document.getElementById('toggle-icon').textContent = customKeyMode ? '▼' : '▶';
-    document.getElementById('start-section').querySelector('.btn').style.display = customKeyMode ? 'none' : '';
+    var section = document.getElementById('custom-key-section');
+    var isHidden = section.style.display === 'none';
+    section.style.display = isHidden ? 'block' : 'none';
+    document.getElementById('toggle-icon').textContent = isHidden ? '▼' : '▶';
 }
 
 function showCustomKeyRequired() {
-    document.getElementById('auto-mode-info').style.display = 'none';
+    var autoInfo = document.getElementById('auto-mode-info');
+    if (autoInfo) autoInfo.style.display = 'none';
     document.getElementById('limit-warning').style.display = 'block';
     document.getElementById('start-section').style.display = 'none';
     document.getElementById('custom-key-section').style.display = 'block';
-    customKeyMode = true;
     document.getElementById('api_key').setAttribute('required', '');
+    document.getElementById('custom-key-section').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function selectProvider(p) {
@@ -153,35 +151,20 @@ function selectProvider(p) {
     if (radio) radio.checked = true;
 }
 
-async function handleFormSubmit(e) {
-    var apiKeyInput = document.getElementById('api_key');
-    var hasCustomKey = apiKeyInput && apiKeyInput.value.trim().length > 0;
-
-    if (hasCustomKey) {
-        return true;
-    }
-
-    e.preventDefault();
-
-    var startBtn = document.getElementById('start-btn');
-    var originalText = startBtn.innerHTML;
-    startBtn.disabled = true;
-    startBtn.innerHTML = '<span class="loading-dots"><span></span><span></span><span></span></span> Provjeravam...';
+async function handleStart() {
+    var btn = document.getElementById('start-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading-dots"><span></span><span></span><span></span></span> Provjeravam...';
 
     try {
         var resp = await fetch(PREFLIGHT_URL, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': CSRF
-            },
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
             body: '{}'
         });
-
         var data = await resp.json();
 
         if (data.available) {
-            document.getElementById('quiz-form').onsubmit = null;
             document.getElementById('quiz-form').submit();
         } else {
             showCustomKeyRequired();
@@ -190,9 +173,8 @@ async function handleFormSubmit(e) {
         showCustomKeyRequired();
     }
 
-    startBtn.disabled = false;
-    startBtn.innerHTML = originalText;
-    return false;
+    btn.disabled = false;
+    btn.innerHTML = 'Pokreni kviz →';
 }
 </script>
 {% endblock %}

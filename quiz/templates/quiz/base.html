@@ -450,12 +450,14 @@
 </head>
 <body>
     <div class="page-wrapper">
-
-        <header class="site-header">
+        <a href="{% url 'home'%}" style="text-decoration: none;">
+            <header class="site-header">
             <span class="seal">⚖️</span>
             <h1>Uvod u <span>Građansko Pravo</span></h1>
             <p class="subtitle">Interaktivni kviz &mdash; 20 zadataka</p>
         </header>
+        </a>
+        
 
         {% block content %}{% endblock %}
 

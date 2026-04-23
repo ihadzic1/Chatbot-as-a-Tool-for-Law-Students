@@ -2,9 +2,14 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
-
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+env_path = BASE_DIR / '.env'
+
+if env_path.exists():
+    load_dotenv(dotenv_path=env_path)
+else:
+    load_dotenv(dotenv_path=BASE_DIR.parent / '.env')
 
 SECRET_KEY = 'django-insecure-ugp-quiz-secret-key-change-in-production'
 

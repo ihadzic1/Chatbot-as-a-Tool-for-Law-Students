@@ -13,6 +13,19 @@ class RateLimitError(Exception):
     pass
 
 
+PLACEHOLDER_MARKERS = ('your', 'here', 'enter', 'insert', 'example', 'xxx', 'test', 'dummy', 'placeholder')
+
+
+def is_valid_api_key(key):
+    if not key or len(key) < 10:
+        return False
+    lower = key.lower()
+    for marker in PLACEHOLDER_MARKERS:
+        if marker in lower:
+            return False
+    return True
+
+
 def home(request):
     if request.method == 'POST':
         mode = request.POST.get('mode', 'sequential')
@@ -40,9 +53,9 @@ def api_preflight(request):
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
     providers = []
-    if settings.GEMINI_API_KEY:
+    if is_valid_api_key(settings.GEMINI_API_KEY):
         providers.append(('gemini', settings.GEMINI_API_KEY))
-    if settings.GROQ_API_KEY:
+    if is_valid_api_key(settings.GROQ_API_KEY):
         providers.append(('groq', settings.GROQ_API_KEY))
 
     if not providers:
@@ -65,7 +78,7 @@ def api_preflight(request):
 
 def test_llm_call(provider, api_key):
     if provider == 'gemini':
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
         payload = {
             "contents": [{"parts": [{"text": "Odgovori samo: OK"}]}],
             "generationConfig": {"temperature": 0, "maxOutputTokens": 5}
@@ -242,9 +255,9 @@ def check_answer(request):
 def evaluate_with_fallback(question, correct_answer, user_answer, topic):
     providers = []
 
-    if settings.GEMINI_API_KEY:
+    if is_valid_api_key(settings.GEMINI_API_KEY):
         providers.append(('gemini', settings.GEMINI_API_KEY))
-    if settings.GROQ_API_KEY:
+    if is_valid_api_key(settings.GROQ_API_KEY):
         providers.append(('groq', settings.GROQ_API_KEY))
 
     if not providers:
@@ -274,21 +287,22 @@ def evaluate_with_fallback(question, correct_answer, user_answer, topic):
     }
 
 
-SYSTEM_PROMPT = """Ti si asistent i profesor građanskog prava koji ocjenjuje odgovore studenata.
+SYSTEM_PROMPT = """Ti si asistent koji ocjenjuje odgovore studenata isključivo na osnovu pruženog referentnog odgovora. U tekstu koji se tice evaluacije neces spominjati pokriva sve tacke iz referentnog odgovora.
 
-Tvoj zadatak je da:
-1. Usporediš studentov odgovor sa tačnim odgovorom
-2. Provjeriš jesu li ključni pravni pojmovi i zaključci prisutni
-3. Budeš fleksibilan — student ne mora koristiti iste riječi, ali mora imati ispravan pravni zaključak
-4. Daš konstruktivnu povratnu informaciju na bosanskom/srpskom/hrvatskom jeziku
+STROGA PRAVILA:
+1. Ocjenjuj SAMO na osnovu referentnog odgovora — NE dodaj vlastite kriterije, članke zakona, pojmove ili detalje koji NISU u referentnom odgovoru
+2. Ako student navede sve ključne tačke iz referentnog odgovora, to je 100/100 — čak i ako nije citirao zakone ili koristio iste riječi
+3. Student ne mora koristiti identične formulacije — bitno je da je pravni zaključak ispravan
+4. U "missing_points" navedi SAMO tačke koje se nalaze u referentnom odgovoru a student ih nije spomenuo
+5. NIKADA ne dodaj u "missing_points" nešto što nije u referentnom odgovoru
 
 Odgovori ISKLJUČIVO u JSON formatu bez ikakvog teksta izvan JSON-a:
 {
   "is_correct": true/false,
   "score": 0-100,
-  "feedback": "Detaljno objašnjenje šta je dobro/loše u odgovoru",
-  "missing_points": ["ključna tačka koja nedostaje 1", "..."],
-  "correct_points": ["što je student dobro naveo 1", "..."]
+  "feedback": "Kratko objašnjenje",
+  "missing_points": ["tačka iz REFERENTNOG odgovora koja nedostaje"],
+  "correct_points": ["što je student dobro naveo"]
 }"""
 
 
@@ -309,6 +323,15 @@ Ocijeni studentov odgovor i vrati SAMO JSON."""
 
 def parse_llm_json(content):
     content = content.strip()
+    start = content.find('{')
+    end = content.rfind('}')
+
+    if start != -1 and end != -1:
+        content = content[start:end+1]
+    else:
+        raise json.JSONDecodeError("Nije pronađen JSON objekt", content, 0)
+    
+
     if '```' in content:
         parts = content.split('```')
         for part in parts:
@@ -398,10 +421,14 @@ def call_openai_compatible(api_key, base_url, model, topic, question, correct_an
 
 
 def call_gemini(api_key, topic, question, correct_answer, user_answer):
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
     payload = {
         "contents": [{"parts": [{"text": SYSTEM_PROMPT + "\n\n" + build_user_message(topic, question, correct_answer, user_answer)}]}],
-        "generationConfig": {"temperature": 0.3, "maxOutputTokens": 700}
+        "generationConfig": {
+            "temperature": 0.1, 
+            "maxOutputTokens": 800,
+            "response_mime_type": "application/json"  
+        }
     }
     req = urllib.request.Request(
         url,
