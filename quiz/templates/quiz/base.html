@@ -46,6 +46,9 @@
             max-width: 860px;
             margin: 0 auto;
             padding: 2rem 1.5rem 4rem;
+            min-height: calc(100vh - 4px);
+            display: flex;
+            flex-direction: column;
         }
 
         /* ---- Site header ---- */
@@ -440,18 +443,21 @@
             font-size: 0.8rem;
             color: #9a8060;
             font-style: italic;
+            margin-top: auto;
         }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
 <body>
     <div class="page-wrapper">
-
-        <header class="site-header">
+        <a href="{% url 'home'%}" style="text-decoration: none;">
+            <header class="site-header">
             <span class="seal">⚖️</span>
             <h1>Uvod u <span>Građansko Pravo</span></h1>
             <p class="subtitle">Interaktivni kviz &mdash; 20 zadataka</p>
         </header>
+        </a>
+        
 
         {% block content %}{% endblock %}
 
